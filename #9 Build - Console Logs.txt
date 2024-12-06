@@ -1,0 +1,155 @@
+Started by user saynarah
+[Pipeline] Start of Pipeline
+[Pipeline] node
+Running on Jenkins in /home/saynarah/.jenkins/workspace/Projeto_DevSecOps_Análise_de_Segurança
+[Pipeline] {
+[Pipeline] withEnv
+[Pipeline] {
+[Pipeline] stage
+[Pipeline] { (Checkout)
+[Pipeline] git
+The recommended git tool is: NONE
+No credentials specified
+ > git rev-parse --resolve-git-dir /home/saynarah/.jenkins/workspace/Projeto_DevSecOps_Análise_de_Segurança/.git # timeout=10
+Fetching changes from the remote Git repository
+ > git config remote.origin.url https://github.com/erev0s/VAmPI.git # timeout=10
+Fetching upstream changes from https://github.com/erev0s/VAmPI.git
+ > git --version # timeout=10
+ > git --version # 'git version 2.34.1'
+ > git fetch --tags --force --progress -- https://github.com/erev0s/VAmPI.git +refs/heads/*:refs/remotes/origin/* # timeout=10
+ > git rev-parse refs/remotes/origin/master^{commit} # timeout=10
+Checking out Revision 1713b54b601ad29582581eeda4b31fceb1319874 (refs/remotes/origin/master)
+ > git config core.sparsecheckout # timeout=10
+ > git checkout -f 1713b54b601ad29582581eeda4b31fceb1319874 # timeout=10
+ > git branch -a -v --no-abbrev # timeout=10
+ > git branch -D master # timeout=10
+ > git checkout -b master 1713b54b601ad29582581eeda4b31fceb1319874 # timeout=10
+Commit message: "Merge pull request #66 from erev0s/custom_error"
+ > git rev-list --no-walk 1713b54b601ad29582581eeda4b31fceb1319874 # timeout=10
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (Run Semgrep)
+[Pipeline] sh
++ semgrep --config auto --json --output semgrep_report.json .
+/usr/lib/python3/dist-packages/requests/__init__.py:87: RequestsDependencyWarning: urllib3 (2.0.0) or chardet (4.0.0) doesn't match a supported version!
+  warnings.warn("urllib3 ({}) or chardet ({}) doesn't match a supported "
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 25 files tracked by git with 1054 Code rules:
+                                                                                                                        
+  Language      Rules   Files          Origin      Rules                                                                
+ ─────────────────────────────        ───────────────────                                                               
+  <multilang>      48      25          Community    1054                                                                
+  python          241      11                                                                                           
+  yaml             31       4                                                                                           
+  json              4       4                                                                                           
+  dockerfile        5       1                                                                                           
+                                                                                                                        
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+Some files were skipped or only partially analyzed.
+  Scan was limited to files tracked by git.
+
+Ran 326 rules on 25 files: 8 findings.
+[Pipeline] sh
++ ls -l semgrep_report.json
+-rw-r--r-- 1 saynarah saynarah 24045 Dec  5 23:15 semgrep_report.json
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (Run Trivy)
+[Pipeline] sh
++ trivy fs --scanners vuln --format json --output trivy_report.json .
+2024-12-05T23:15:39-03:00	INFO	[vuln] Vulnerability scanning is enabled
+2024-12-05T23:15:39-03:00	WARN	[pip] Unable to find python `site-packages` directory. License detection is skipped.	err="site-packages directory not found"
+2024-12-05T23:15:39-03:00	INFO	Number of language-specific files	num=1
+2024-12-05T23:15:39-03:00	INFO	[pip] Detecting vulnerabilities...
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (Run Gitleaks)
+[Pipeline] sh
++ gitleaks detect --source=. --report-format=json --report-path=gitleaks_report.json
+
+    ○
+    │╲
+    │ ○
+    ○ ░
+    ░    gitleaks
+
+[90m11:15PM[0m [32mINF[0m 47 commits scanned.
+[90m11:15PM[0m [32mINF[0m scan completed in 31ms
+[90m11:15PM[0m [31mWRN[0m leaks found: 1
++ true
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (Upload Reports to DefectDojo)
+[Pipeline] sh
++ python3 /home/saynarah/.local/lib/python3.10/site-packages/defectdojo_api/defectdojo.py --url http://localhost:8080/api/v2/import-scan/ --api_key 21ec9553ffa670bc4e034073e5b39ca60084bf78 --file semgrep_report.json --scan_type Semgrep JSON Report --product_name Vampi
+/usr/lib/python3/dist-packages/requests/__init__.py:87: RequestsDependencyWarning: urllib3 (2.0.0) or chardet (4.0.0) doesn't match a supported version!
+  warnings.warn("urllib3 ({}) or chardet ({}) doesn't match a supported "
+[Pipeline] sh
++ python3 /home/saynarah/.local/lib/python3.10/site-packages/defectdojo_api/defectdojo.py --url http://localhost:8080/api/v2/import-scan/ --api_key 21ec9553ffa670bc4e034073e5b39ca60084bf78 --file trivy_report.json --scan_type Trivy Scan --product_name Vampi
+/usr/lib/python3/dist-packages/requests/__init__.py:87: RequestsDependencyWarning: urllib3 (2.0.0) or chardet (4.0.0) doesn't match a supported version!
+  warnings.warn("urllib3 ({}) or chardet ({}) doesn't match a supported "
+[Pipeline] sh
++ python3 /home/saynarah/.local/lib/python3.10/site-packages/defectdojo_api/defectdojo.py --url http://localhost:8080/api/v2/import-scan/ --api_key 21ec9553ffa670bc4e034073e5b39ca60084bf78 --file gitleaks_report.json --scan_type Gitleaks Scan --product_name Vampi
+/usr/lib/python3/dist-packages/requests/__init__.py:87: RequestsDependencyWarning: urllib3 (2.0.0) or chardet (4.0.0) doesn't match a supported version!
+  warnings.warn("urllib3 ({}) or chardet ({}) doesn't match a supported "
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (Sent Reports to DefectDojo)
+[Pipeline] sh
++ date +%Y-%m-%d
++ curl -X POST http://localhost:8080/api/v2/import-scan/ -H Authorization: Token 21ec9553ffa670bc4e034073e5b39ca60084bf78 -F scan_type=Semgrep JSON Report -F product_id=1 -F engagement=1 -F file=@/home/saynarah/.jenkins/workspace/Projeto_de_segurança_trabalho_final/semgrep_report.json -F scan_date=2024-12-05 -F active=true -F verified=true
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100 12.4M    0     0  100 12.4M      0  10.3M  0:00:01  0:00:01 --:--:-- 10.3M100 12.4M  100  1291  100 12.4M    908  8974k  0:00:01  0:00:01 --:--:-- 8980k
+{"scan_date":"2024-12-05","minimum_severity":"Info","active":true,"verified":true,"endpoint_to_add":null,"auto_create_context":false,"deduplication_on_engagement":false,"lead":null,"push_to_jira":false,"api_scan_configuration":null,"create_finding_groups_for_all_findings":true,"test_id":16,"engagement_id":1,"product_id":1,"product_type_id":2,"statistics":{"after":{"info":{"active":0,"verified":0,"duplicate":0,"false_p":0,"out_of_scope":0,"is_mitigated":0,"risk_accepted":0,"total":0},"low":{"active":0,"verified":0,"duplicate":0,"false_p":0,"out_of_scope":0,"is_mitigated":0,"risk_accepted":0,"total":0},"medium":{"active":0,"verified":0,"duplicate":0,"false_p":0,"out_of_scope":0,"is_mitigated":0,"risk_accepted":0,"total":0},"high":{"active":8,"verified":8,"duplicate":0,"false_p":0,"out_of_scope":0,"is_mitigated":0,"risk_accepted":0,"total":8},"critical":{"active":0,"verified":0,"duplicate":0,"false_p":0,"out_of_scope":0,"is_mitigated":0,"risk_accepted":0,"total":0},"total":{"active":8,"verified":8,"duplicate":0,"false_p":0,"out_of_scope":0,"is_mitigated":0,"risk_accepted":0,"total":8}}},"apply_tags_to_findings":false,"apply_tags_to_endpoints":false,"scan_type":"Semgrep JSON Report","engagement":1,"close_old_findings":false,"close_old_findings_product_scope":false,"test":16}
+[Pipeline] sh
++ date +%Y-%m-%d
++ date +%Y-%m-%d
++ curl -X POST http://localhost:8080/api/v2/import-scan/ -H accept: application/json -H Content-Type: multipart/form-data -H Cookie: sessionid=4ffcc1e9fba5ee5815aadf12218367380e35373e -H Authorization: Token 21ec9553ffa670bc4e034073e5b39ca60084bf78 -F active=true -F verified=true -F close_old_findings=false -F test_title= -F deduplication_on_engagement=true -F push_to_jira=false -F minimum_severity=Info -F close_old_findings_product_scope=false -F apply_tags_to_endpoints=true -F scan_date=2024-12-05 -F create_finding_groups_for_all_findings=true -F scan_date=2024-12-05 -F group_by= -F version= -F tags= -F api_scan_configuration= -F product_name=Vampi -F file=@/home/saynarah/.jenkins/workspace/Projeto_de_segurança_trabalho_final/trivy_report.json -F auto_create_context=true -F lead= -F scan_type=Trivy Scan -F branch_tag=string -F source_code_management_uri= -F engagement=1
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100  7519    0     0  100  7519      0  37485 --:--:-- --:--:-- --:--:-- 37407100  8853  100  1334  100  7519   1743   9825 --:--:-- --:--:-- --:--:-- 11557
+{"scan_date":"2024-12-05","minimum_severity":"Info","active":true,"verified":true,"endpoint_to_add":null,"product_name":"Vampi","auto_create_context":true,"deduplication_on_engagement":true,"lead":null,"push_to_jira":false,"branch_tag":"string","api_scan_configuration":null,"create_finding_groups_for_all_findings":true,"test_id":17,"engagement_id":1,"product_id":1,"product_type_id":2,"statistics":{"after":{"info":{"active":0,"verified":0,"duplicate":0,"false_p":0,"out_of_scope":0,"is_mitigated":0,"risk_accepted":0,"total":0},"low":{"active":0,"verified":0,"duplicate":0,"false_p":0,"out_of_scope":0,"is_mitigated":0,"risk_accepted":0,"total":0},"medium":{"active":0,"verified":0,"duplicate":0,"false_p":0,"out_of_scope":0,"is_mitigated":0,"risk_accepted":0,"total":0},"high":{"active":1,"verified":1,"duplicate":0,"false_p":0,"out_of_scope":0,"is_mitigated":0,"risk_accepted":0,"total":1},"critical":{"active":0,"verified":0,"duplicate":0,"false_p":0,"out_of_scope":0,"is_mitigated":0,"risk_accepted":0,"total":0},"total":{"active":1,"verified":1,"duplicate":0,"false_p":0,"out_of_scope":0,"is_mitigated":0,"risk_accepted":0,"total":1}}},"apply_tags_to_findings":false,"apply_tags_to_endpoints":true,"scan_type":"Trivy Scan","engagement":1,"tags":[],"close_old_findings":false,"close_old_findings_product_scope":false,"test":17}
+[Pipeline] sh
++ date +%Y-%m-%d
++ date +%Y-%m-%d
++ curl -X POST http://localhost:8080/api/v2/import-scan/ -H accept: application/json -H Content-Type: multipart/form-data -H Cookie: sessionid=4ffcc1e9fba5ee5815aadf12218367380e35373e -H Authorization: Token 21ec9553ffa670bc4e034073e5b39ca60084bf78 -F active=true -F verified=true -F close_old_findings=false -F test_title= -F deduplication_on_engagement=true -F push_to_jira=false -F minimum_severity=Info -F close_old_findings_product_scope=false -F apply_tags_to_endpoints=true -F scan_date=2024-12-05 -F create_finding_groups_for_all_findings=true -F scan_date=2024-12-05 -F group_by= -F version= -F tags= -F api_scan_configuration= -F product_name=Vampi -F file=@/home/saynarah/.jenkins/workspace/Projeto_de_segurança_trabalho_final/gitleaks_report.json -F auto_create_context=true -F lead= -F scan_type=Gitleaks Scan -F branch_tag=string -F source_code_management_uri= -F engagement=1
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100  5005  100  1337  100  3668   6949  19064 --:--:-- --:--:-- --:--:-- 26067
+{"scan_date":"2024-12-05","minimum_severity":"Info","active":true,"verified":true,"endpoint_to_add":null,"product_name":"Vampi","auto_create_context":true,"deduplication_on_engagement":true,"lead":null,"push_to_jira":false,"branch_tag":"string","api_scan_configuration":null,"create_finding_groups_for_all_findings":true,"test_id":18,"engagement_id":1,"product_id":1,"product_type_id":2,"statistics":{"after":{"info":{"active":0,"verified":0,"duplicate":0,"false_p":0,"out_of_scope":0,"is_mitigated":0,"risk_accepted":0,"total":0},"low":{"active":0,"verified":0,"duplicate":0,"false_p":0,"out_of_scope":0,"is_mitigated":0,"risk_accepted":0,"total":0},"medium":{"active":0,"verified":0,"duplicate":0,"false_p":0,"out_of_scope":0,"is_mitigated":0,"risk_accepted":0,"total":0},"high":{"active":1,"verified":1,"duplicate":0,"false_p":0,"out_of_scope":0,"is_mitigated":0,"risk_accepted":0,"total":1},"critical":{"active":0,"verified":0,"duplicate":0,"false_p":0,"out_of_scope":0,"is_mitigated":0,"risk_accepted":0,"total":0},"total":{"active":1,"verified":1,"duplicate":0,"false_p":0,"out_of_scope":0,"is_mitigated":0,"risk_accepted":0,"total":1}}},"apply_tags_to_findings":false,"apply_tags_to_endpoints":true,"scan_type":"Gitleaks Scan","engagement":1,"tags":[],"close_old_findings":false,"close_old_findings_product_scope":false,"test":18}
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (Archive Artifacts)
+[Pipeline] archiveArtifacts
+Archiving artifacts
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (Declarative: Post Actions)
+[Pipeline] echo
+Pipeline finished
+[Pipeline] echo
+Pipeline was successful!
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] }
+[Pipeline] // withEnv
+[Pipeline] }
+[Pipeline] // node
+[Pipeline] End of Pipeline
+Finished: SUCCESS
